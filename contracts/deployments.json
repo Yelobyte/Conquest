@@ -1,0 +1,10 @@
+{
+  "CabalWager": {
+    "address": "0x7C1B5Ec310f28883B97c16dc822178B67285fbD6",
+    "network": "fuji",
+    "chainId": 43113,
+    "deployer": "0x794130BD50e092683696D579F31B6019C9F320E5",
+    "deployedAt": "2026-03-09T20:44:06.989Z",
+    "explorer": "https://testnet.snowtrace.io/address/0x7C1B5Ec310f28883B97c16dc822178B67285fbD6"
+  }
+}
