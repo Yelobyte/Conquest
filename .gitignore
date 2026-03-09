@@ -27,6 +27,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env.deploy
 
 # vercel
 .vercel
@@ -34,6 +35,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# hardhat
+artifacts/
+cache/
+typechain-types/
 
 # claude
 .claude/
