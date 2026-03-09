@@ -1,101 +1,92 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { generateRoomCode } from '@/lib/game/engine'
+import WalletButton from '@/components/platform/WalletButton'
+
+export default function HomePage() {
+  const router = useRouter()
+  const [name, setName] = useState('')
+
+  const startTestMode = () => {
+    const playerName = name.trim() || 'Player'
+    const roomCode = generateRoomCode()
+    router.push(`/game/${roomCode}?mode=test&name=${encodeURIComponent(playerName)}`)
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-parchment flex flex-col">
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-6 py-4 border-b border-ink/10">
+        <h1 className="font-display text-2xl font-bold text-ink tracking-tight">Conquest</h1>
+        <WalletButton />
+      </nav>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Hero */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="max-w-md w-full space-y-6">
+          <div className="space-y-3">
+            <h2 className="font-display text-4xl font-bold text-ink leading-tight">
+              Play Cabal
+            </h2>
+            <p className="font-sans text-ink-muted text-base leading-relaxed">
+              Social deduction. Political satire. Someone at this table is Cabal — and it might be you.
+            </p>
+          </div>
+
+          {/* Test Mode card */}
+          <div className="rounded-2xl border-2 border-gold bg-gold/10 p-6 space-y-4 text-left">
+            <div>
+              <span className="text-xs font-sans uppercase tracking-widest text-gold font-semibold">
+                Test Mode
+              </span>
+              <h3 className="font-display text-xl font-bold text-ink mt-1">
+                Solo + 3 Bots
+              </h3>
+              <p className="font-sans text-sm text-ink-muted mt-1">
+                Play the full Cabal game loop instantly. No waiting for other players.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-sans font-semibold text-ink-muted uppercase tracking-widest mb-2">
+                Your name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && startTestMode()}
+                placeholder="Enter your name..."
+                maxLength={20}
+                className="w-full bg-parchment border border-ink/20 rounded-xl px-4 py-3 font-sans text-sm text-ink placeholder-ink/30 outline-none focus:border-gold transition-colors"
+              />
+            </div>
+
+            <button
+              onClick={startTestMode}
+              className="w-full bg-terracotta text-parchment font-sans font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity text-sm"
+            >
+              Start Test Mode →
+            </button>
+          </div>
+
+          {/* Classic mode — coming in branch 2 */}
+          <div className="rounded-2xl border-2 border-ink/10 p-6 text-left opacity-50">
+            <span className="text-xs font-sans uppercase tracking-widest text-ink-muted font-semibold">
+              Classic Mode
+            </span>
+            <h3 className="font-display text-xl font-bold text-ink mt-1">
+              4–7 Players · Room Code
+            </h3>
+            <p className="font-sans text-sm text-ink-muted mt-1">
+              Create a room, share the code, play with real people.
+            </p>
+            <p className="text-xs font-sans text-ink/30 mt-3 uppercase tracking-wider">Coming soon</p>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
-  );
+  )
 }
