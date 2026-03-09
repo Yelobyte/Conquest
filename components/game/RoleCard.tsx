@@ -5,6 +5,7 @@ import { Role, ROLE_LABELS, ROLE_DESCRIPTIONS, ROLE_TEAMS } from '@/lib/game/rol
 interface RoleCardProps {
   role: Role
   onReady: () => void
+  peek?: boolean
 }
 
 const ROLE_ICONS: Record<string, string> = {
@@ -19,7 +20,7 @@ const ROLE_ICONS: Record<string, string> = {
   recruited_citizen: '🔄',
 }
 
-export default function RoleCard({ role, onReady }: RoleCardProps) {
+export default function RoleCard({ role, onReady, peek = false }: RoleCardProps) {
   const team = ROLE_TEAMS[role]
   const isCabal = team === 'cabal'
 
@@ -60,7 +61,7 @@ export default function RoleCard({ role, onReady }: RoleCardProps) {
               : 'bg-terracotta text-parchment'
           }`}
         >
-          I understand my role
+          {peek ? 'Close' : 'I understand my role'}
         </button>
       </div>
     </div>

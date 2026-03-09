@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   LocalPlayer,
@@ -69,7 +69,7 @@ function buildInitialPlayers(humanName: string): LocalPlayer[] {
   return assignRoles([...bots, human])
 }
 
-export default function GamePage() {
+function GamePageInner() {
   const searchParams = useSearchParams()
   const humanName = searchParams.get('name') ?? 'You'
 
@@ -84,6 +84,7 @@ export default function GamePage() {
   const [voteEliminated, setVoteEliminated] = useState<LocalPlayer | null>(null)
   const [dayBannerText, setDayBannerText] = useState('')
   const [revealAllRoles, setRevealAllRoles] = useState(false)
+  const [showRoleCard, setShowRoleCard] = useState(false)
 
   // Derived
   const human = players.find((p) => !p.isBot)!
@@ -315,9 +316,14 @@ export default function GamePage() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-parchment">
-      {/* Role Reveal overlay */}
+      {/* Role Reveal overlay (initial) */}
       {phase === 'role_reveal' && human && (
         <RoleCard role={human.role} onReady={() => setPhase('night')} />
+      )}
+
+      {/* Role peek overlay (persistent access) */}
+      {showRoleCard && human && phase !== 'role_reveal' && (
+        <RoleCard role={human.role} onReady={() => setShowRoleCard(false)} peek />
       )}
 
       {/* Game ended overlay */}
@@ -358,9 +364,19 @@ export default function GamePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-bold text-ink">Cabal</h1>
-          <span className="text-xs font-sans text-ink-muted uppercase tracking-widest">
-            Test Mode · Round {round}
-          </span>
+          <div className="flex items-center gap-3">
+            {phase !== 'role_reveal' && phase !== 'ended' && human && (
+              <button
+                onClick={() => setShowRoleCard(true)}
+                className="text-xs font-sans font-semibold text-gold border border-gold/40 rounded-full px-3 py-1 hover:bg-gold/10 transition-colors"
+              >
+                My Role
+              </button>
+            )}
+            <span className="text-xs font-sans text-ink-muted uppercase tracking-widest">
+              Test Mode · Round {round}
+            </span>
+          </div>
         </div>
 
         {/* Phase banner */}
@@ -432,5 +448,13 @@ export default function GamePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function GamePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-parchment" />}>
+      <GamePageInner />
+    </Suspense>
   )
 }
