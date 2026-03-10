@@ -181,9 +181,15 @@ function GamePageInner() {
       setPhase('ended'); return
     }
     setPhase('night_result')
+    // NOTE: transition to day is handled by the dedicated effect below
+  }, [nightActions, nightTimedOut, phase, round]) // eslint-disable-line
+
+  // ── night_result → day (own effect so cleanup never cancels this timer) ─────
+  useEffect(() => {
+    if (phase !== 'night_result') return
     const t = setTimeout(() => { setPhase('day'); Sounds.dayBreak() }, 3000)
     return () => clearTimeout(t)
-  }, [nightActions, nightTimedOut, phase, round]) // eslint-disable-line
+  }, [phase])
 
   // ── Day deliberation timer (60s fallback → auto-starts voting) ─────────────
   useEffect(() => {
@@ -515,6 +521,17 @@ function GamePageInner() {
 
       <div className="max-w-4xl mx-auto px-4 pt-5 space-y-4 relative z-10">
 
+        {/* ── Ghost mode banner ── */}
+        {human?.status === 'eliminated' && !isNight && phase !== 'vote_result' && (
+          <div className="rounded-xl border border-white/10 px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <span className="text-xl">👻</span>
+            <div>
+              <p className="text-sm font-sans font-semibold text-white/60">You have been sent to Kuje.</p>
+              <p className="text-xs font-sans text-white/25">Watch the others deliberate. The game continues without you.</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Night / Night-result banner ── */}
         {isNight && (
           <div className="rounded-2xl p-4 border border-[#C9A84C]/15" style={{ background: 'rgba(18,10,4,0.7)' }}>
@@ -696,16 +713,23 @@ function GamePageInner() {
               <div ref={chatEndRef} />
             </div>
 
-            <form onSubmit={handleHumanChat} className="border-t border-white/8 flex gap-2 p-3">
-              <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-                placeholder="Speak your mind in the village square…"
-                className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-[#C9A84C]/40 border border-white/10 transition-colors"
-                style={{ background: 'rgba(255,255,255,0.05)' }} />
-              <button type="submit" disabled={!chatInput.trim()}
-                className="bg-[#C9A84C]/20 border border-[#C9A84C]/30 text-[#C9A84C] font-sans font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-30 hover:bg-[#C9A84C]/30 transition-colors">
-                Send
-              </button>
-            </form>
+            {human?.status === 'alive' ? (
+              <form onSubmit={handleHumanChat} className="border-t border-white/8 flex gap-2 p-3">
+                <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                  placeholder="Speak your mind in the village square…"
+                  className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-[#C9A84C]/40 border border-white/10 transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.05)' }} />
+                <button type="submit" disabled={!chatInput.trim()}
+                  className="bg-[#C9A84C]/20 border border-[#C9A84C]/30 text-[#C9A84C] font-sans font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-30 hover:bg-[#C9A84C]/30 transition-colors">
+                  Send
+                </button>
+              </form>
+            ) : (
+              <div className="border-t border-white/8 px-4 py-3 flex items-center gap-2">
+                <span className="text-sm">👻</span>
+                <span className="text-xs font-sans italic text-white/25">You have been eliminated. You watch in silence.</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -715,10 +739,10 @@ function GamePageInner() {
             <button onClick={startVoting}
               className="w-full py-4 rounded-2xl font-sans font-bold text-base text-white transition-all hover:-translate-y-0.5 active:scale-95"
               style={{ background: 'linear-gradient(135deg, #C85A2A, #8B1A1A)', boxShadow: '0 4px 24px rgba(200,90,42,0.35)' }}>
-              ⚖️ Ready to Vote — Name the Agbero
+              {human?.status === 'alive' ? '⚖️ Ready to Vote — Name the Agbero' : '⚖️ Start the Vote (spectating)'}
             </button>
             <p className="text-center text-[10px] font-sans text-white/25">
-              All players vote simultaneously. Timer auto-starts voting in {dayTimer}s.
+              {human?.status === 'alive' ? `All players vote simultaneously. Auto-starts in ${dayTimer}s.` : `Watching — vote auto-starts in ${dayTimer}s.`}
             </p>
           </div>
         )}
