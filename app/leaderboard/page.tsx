@@ -37,8 +37,9 @@ export default function LeaderboardPage() {
       {/* Nav */}
       <nav className="sticky top-0 z-30 bg-[#F5EDDA]/95 backdrop-blur-sm border-b border-[#C9A84C]/20">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <button onClick={() => { Sounds.click(); router.push('/') }} className="flex items-center">
+          <button onClick={() => { Sounds.click(); router.push('/') }} className="flex items-center gap-2">
             <img src="/Conquest_Logo.jpg" alt="Conquest" className="h-9 w-auto" />
+            <span className="font-display font-black text-xl text-[#1C1710]" style={{ fontFamily: 'Fraunces, serif' }}>Conquest</span>
           </button>
           <div className="flex items-center gap-1 bg-[#EDE0C4] rounded-full px-1 py-1">
             {['Games', 'Friends', 'Leaderboard'].map(t => (
