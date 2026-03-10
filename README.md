@@ -15,7 +15,7 @@
 
 ## What is Conquest?
 
-Conquest is a real-time, multiplayer social deduction game set against the backdrop of Nigerian politics and power. Players are assigned secret roles — some are loyal citizens, others are part of the shadowy **Cabal**. Each night, the Cabal eliminates a citizen. Each day, players debate and vote to exile who they believe is the enemy.
+Conquest is a social gaming platform that builds real human connections — at live events, virtual hangouts, and across distances. It's flagship game "Cabal" a real-time, multiplayer social deduction game set against the backdrop of Nigerian politics and power. Players are assigned secret roles — some are loyal citizens, others are part of the shadowy **Cabal**. Each night, the Cabal eliminates a citizen. Each day, players debate and vote to exile who they believe is the enemy.
 
 The game features:
 - **7 unique roles** with special abilities
@@ -381,13 +381,13 @@ conquest/
 
 ---
 
-## License
+## Owned by
 
-MIT © [Yelobyte Studios](https://yelobyte.com)
+[Yelobyte Studios](https://yelobyte.studio)
 
 ---
 
 <div align="center">
   <img src="./assets/Conquest_Logo.jpg" width="60" /><br/>
-  <sub>Built with 🇳🇬 by Yelobyte Studios</sub>
+  <sub>Built with Love & Fun by Yelobyte Studios</sub>
 </div>
