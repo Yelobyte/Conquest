@@ -201,8 +201,9 @@ export default function HomePage() {
         {/* Nav */}
         <nav className="sticky top-0 z-30 bg-[#F5EDDA]/95 backdrop-blur-sm border-b border-[#C9A84C]/20">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
               <img src="/Conquest_Logo.jpg" alt="Conquest" className="h-9 w-auto" />
+              <span className="font-display font-black text-xl text-ink tracking-tight" style={{ fontFamily: 'Fraunces, serif' }}>Conquest</span>
             </div>
             <div className="hidden md:flex items-center gap-1 bg-[#EDE0C4] rounded-full px-1 py-1">
               {['Games', 'Friends', 'Leaderboard'].map((tab) => (
