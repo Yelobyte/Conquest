@@ -79,10 +79,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 
       {/* Logo */}
       <div className="relative z-10 text-center space-y-4 fade-slide-up">
-        <div className="text-8xl mb-4 float">🏛️</div>
-        <h1 className="font-display text-6xl font-black tracking-widest shimmer-text" style={{ fontFamily: 'Fraunces, serif' }}>
-          CONQUEST
-        </h1>
+        <img src="/Conquest_Logo.jpg" alt="Conquest" className="w-56 h-auto mx-auto float drop-shadow-2xl" />
 
         {phase >= 2 && (
           <p className="font-display italic text-xl text-[#C9A84C]/80 fade-in" style={{ fontFamily: 'Fraunces, serif' }}>
@@ -204,9 +201,8 @@ export default function HomePage() {
         {/* Nav */}
         <nav className="sticky top-0 z-30 bg-[#F5EDDA]/95 backdrop-blur-sm border-b border-[#C9A84C]/20">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🏛️</span>
-              <span className="font-display font-black text-xl text-ink tracking-tight" style={{ fontFamily: 'Fraunces, serif' }}>Conquest</span>
+            <div className="flex items-center">
+              <img src="/Conquest_Logo.jpg" alt="Conquest" className="h-9 w-auto" />
             </div>
             <div className="hidden md:flex items-center gap-1 bg-[#EDE0C4] rounded-full px-1 py-1">
               {['Games', 'Friends', 'Leaderboard'].map((tab) => (
@@ -449,8 +445,7 @@ export default function HomePage() {
         <footer className="border-t border-[#C9A84C]/15 py-8 px-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🏛️</span>
-              <span className="font-display font-black text-sm text-ink" style={{ fontFamily: 'Fraunces, serif' }}>Conquest</span>
+              <img src="/Conquest_Logo.jpg" alt="Conquest" className="h-7 w-auto" />
               <span className="text-xs text-[#C4B090] font-sans">by Yelobyte Studios</span>
             </div>
             <div className="flex items-center gap-4 text-xs font-sans text-[#C4B090]">
