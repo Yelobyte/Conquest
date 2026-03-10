@@ -61,15 +61,15 @@ function EmberParticles() {
   )
 }
 
-function CountdownRing({ seconds, total }: { seconds: number; total: number }) {
-  const r = 26, c = 2 * Math.PI * r
+function CountdownRing({ seconds, total, size = 56 }: { seconds: number; total: number; size?: number }) {
+  const r = (size / 2) - 4, c = 2 * Math.PI * r
   const pct = Math.max(0, seconds / total)
   const color = pct > 0.5 ? '#C9A84C' : pct > 0.25 ? '#C85A2A' : '#EF4444'
   return (
-    <div className="relative w-14 h-14 flex items-center justify-center">
-      <svg className="absolute inset-0 -rotate-90" width="56" height="56">
-        <circle cx="28" cy="28" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
-        <circle cx="28" cy="28" r={r} fill="none" stroke={color} strokeWidth="3"
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg className="absolute inset-0 -rotate-90" width={size} height={size}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="3"
           strokeDasharray={c} strokeDashoffset={c * (1 - pct)} strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s' }} />
       </svg>
@@ -95,7 +95,9 @@ function GamePageInner() {
   const [votes, setVotes] = useState<Vote[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [winner, setWinner] = useState<'citizens' | 'cabal' | null>(null)
-  const [dayTimer, setDayTimer] = useState(90)
+  const [dayTimer, setDayTimer] = useState(60)
+  const [votingTimer, setVotingTimer] = useState(30)
+  const [votingTimedOut, setVotingTimedOut] = useState(false)
   const [voteEliminated, setVoteEliminated] = useState<LocalPlayer | null>(null)
   const [tiedPlayers, setTiedPlayers] = useState<LocalPlayer[]>([])
   const [dayBannerText, setDayBannerText] = useState('')
@@ -114,7 +116,7 @@ function GamePageInner() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  // Bot night actions
+  // ── Bot night actions ──────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'night') return
     const bots = players.filter(p => p.isBot && p.status === 'alive')
@@ -129,7 +131,7 @@ function GamePageInner() {
     return () => timers.forEach(clearTimeout)
   }, [phase, round]) // eslint-disable-line
 
-  // Night timer
+  // ── Night timer ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'night') return
     nightResolvedRef.current = false
@@ -145,7 +147,7 @@ function GamePageInner() {
     return () => clearInterval(iv)
   }, [phase, round]) // eslint-disable-line
 
-  // Night resolution
+  // ── Night resolution ───────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'night') return
     const alive = players.filter(p => p.status === 'alive')
@@ -183,10 +185,10 @@ function GamePageInner() {
     return () => clearTimeout(t)
   }, [nightActions, nightTimedOut, phase, round]) // eslint-disable-line
 
-  // Day timer
+  // ── Day deliberation timer (60s fallback → auto-starts voting) ─────────────
   useEffect(() => {
     if (phase !== 'day') return
-    setDayTimer(90)
+    setDayTimer(60)
     const iv = setInterval(() => {
       setDayTimer(t => {
         if (t <= 1) { clearInterval(iv); setPhase('voting'); return 0 }
@@ -196,7 +198,7 @@ function GamePageInner() {
     return () => clearInterval(iv)
   }, [phase, round]) // eslint-disable-line
 
-  // Bot chat
+  // ── Bot chat during day ────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'day') return
     const bots = players.filter(p => p.isBot && p.status === 'alive')
@@ -214,7 +216,34 @@ function GamePageInner() {
     return () => timers.forEach(clearTimeout)
   }, [phase, round]) // eslint-disable-line
 
-  // Resolve elimination (ref-based to prevent stale closure)
+  // ── Voting timer (30s) — auto-votes for human if they haven't voted ────────
+  useEffect(() => {
+    if (phase !== 'voting') return
+    setVotingTimedOut(false)
+    setVotingTimer(30)
+    const iv = setInterval(() => {
+      setVotingTimer(t => {
+        if (t <= 1) { clearInterval(iv); setVotingTimedOut(true); return 0 }
+        return t - 1
+      })
+    }, 1000)
+    return () => clearInterval(iv)
+  }, [phase, round]) // eslint-disable-line
+
+  // ── Auto-vote for human when voting timer expires ──────────────────────────
+  useEffect(() => {
+    if (!votingTimedOut || phase !== 'voting') return
+    if (!human || human.status !== 'alive') return
+    const alreadyVoted = votes.some(v => v.voterId === human.id && v.round === round && v.voteNumber === 1)
+    if (alreadyVoted) return
+    const targets = players.filter(p => p.status === 'alive' && p.id !== human.id)
+    if (targets.length === 0) return
+    const target = targets[Math.floor(Math.random() * targets.length)]
+    addVote({ voterId: human.id, targetId: target.id, round, voteNumber: 1 })
+    Sounds.vote()
+  }, [votingTimedOut, phase, votes, round]) // eslint-disable-line
+
+  // ── Resolve elimination (ref-based to prevent stale closure) ──────────────
   const resolveElimRef = useRef<(el: LocalPlayer | null) => void>(() => {})
   useEffect(() => {
     resolveElimRef.current = (eliminated: LocalPlayer | null) => {
@@ -238,12 +267,13 @@ function GamePageInner() {
         setRound(r => r + 1)
         setVoteEliminated(null); setTiedPlayers([])
         setDibiaResult(null); setHumanNightActionDone(false)
+        setVotingTimedOut(false)
         setPhase('night'); Sounds.nightFall()
       }, 4000)
     }
   }, [players])
 
-  // Bot voting
+  // ── Bot voting ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'voting' && phase !== 'second_voting') return
     const voteNumber = phase === 'voting' ? 1 : 2
@@ -267,7 +297,7 @@ function GamePageInner() {
     return () => timers.forEach(clearTimeout)
   }, [phase, round, tiedPlayers]) // eslint-disable-line
 
-  // First vote resolution
+  // ── First vote resolution ──────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'voting') return
     const alive = players.filter(p => p.status === 'alive')
@@ -278,7 +308,7 @@ function GamePageInner() {
     resolveElimRef.current(eliminated ?? null)
   }, [votes, phase, round]) // eslint-disable-line
 
-  // Second vote resolution
+  // ── Second vote resolution ─────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'second_voting') return
     const alive = players.filter(p => p.status === 'alive')
@@ -288,6 +318,7 @@ function GamePageInner() {
     resolveElimRef.current(eliminated ?? null)
   }, [votes, phase, round]) // eslint-disable-line
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleHumanNightAction = (targetId: string) => {
     if (!human || humanNightActionDone) return
     const actionType = human.role === 'dibia' ? 'investigate' : human.role === 'soldier' ? 'protect' : 'eliminate'
@@ -315,6 +346,12 @@ function GamePageInner() {
     setChatInput('')
   }
 
+  const startVoting = () => {
+    setPhase('voting')
+    Sounds.wager()
+  }
+
+  // ── Derived values ─────────────────────────────────────────────────────────
   const humanHasVoted = (vNum: number) => human ? votes.some(v => v.voterId === human.id && v.round === round && v.voteNumber === vNum) : false
   const tally = (() => {
     const vNum = phase === 'second_voting' ? 2 : 1
@@ -333,8 +370,9 @@ function GamePageInner() {
     players.find(p => p.displayName === suspectName)?.team === 'cabal'
 
   const isNight = phase === 'night' || phase === 'night_result'
+  const aliveCount = players.filter(p => p.status === 'alive').length
 
-  // ======= ROLE REVEAL =======
+  // ── ROLE REVEAL ────────────────────────────────────────────────────────────
   if (phase === 'role_reveal' && human) {
     const isCabal = human.team === 'cabal'
     return (
@@ -361,7 +399,7 @@ function GamePageInner() {
     )
   }
 
-  // ======= GAME ENDED =======
+  // ── GAME ENDED ─────────────────────────────────────────────────────────────
   if (phase === 'ended') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center p-6 text-center ${winner === 'citizens' ? 'bg-[#06140A]' : 'bg-[#140606]'}`}>
@@ -399,7 +437,7 @@ function GamePageInner() {
                   <div className="p-3 text-left flex flex-col justify-center">
                     <p className="text-white font-sans font-bold text-sm leading-tight">{p.displayName}</p>
                     <p className={`text-xs font-sans ${ROLE_TEAMS[p.role] === 'cabal' ? 'text-[#C85A2A]' : 'text-[#C9A84C]'}`}>{ROLE_LABELS[p.role]}</p>
-                    {p.status === 'eliminated' && <p className="text-[10px] text-white/25 font-sans mt-0.5">Kuje</p>}
+                    {p.status === 'eliminated' && <p className="text-[10px] text-white/25 font-sans mt-0.5">Sent to Kuje</p>}
                   </div>
                 </div>
               ))}
@@ -414,7 +452,7 @@ function GamePageInner() {
     )
   }
 
-  // ======= MAIN GAME UI =======
+  // ── MAIN GAME UI ───────────────────────────────────────────────────────────
   return (
     <div className="game-bg min-h-screen relative pb-10">
       <EmberParticles />
@@ -436,14 +474,18 @@ function GamePageInner() {
         </div>
       )}
 
-      {/* Sticky header */}
+      {/* ── Sticky header ── */}
       <div className="sticky top-0 z-20 border-b border-white/8" style={{ background: 'rgba(10,6,3,0.92)', backdropFilter: 'blur(12px)' }}>
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl">{isNight ? '🌙' : '☀️'}</span>
+            <span className="text-2xl">{isNight ? '🌙' : phase === 'voting' || phase === 'second_voting' ? '⚖️' : '☀️'}</span>
             <div>
               <p className="text-[10px] font-sans uppercase tracking-wider text-white/40 leading-none mb-0.5">
-                {isNight ? 'Night Phase' : phase === 'voting' ? 'Voting' : phase === 'second_voting' ? 'Re-vote' : phase === 'vote_result' ? 'Verdict' : 'Day Phase'}
+                {isNight ? 'Night Phase'
+                  : phase === 'day' ? 'Deliberation'
+                  : phase === 'voting' ? 'Cast Your Vote'
+                  : phase === 'second_voting' ? 'Re-vote — Tied'
+                  : 'Verdict'}
               </p>
               <p className="text-sm font-display font-bold text-white leading-none" style={{ fontFamily: 'Fraunces, serif' }}>Round {round}</p>
             </div>
@@ -451,9 +493,9 @@ function GamePageInner() {
 
           <div className="flex items-center gap-2">
             {phase === 'night' && <CountdownRing seconds={nightTimer} total={30} />}
-            {phase === 'day' && <CountdownRing seconds={dayTimer} total={90} />}
+            {phase === 'voting' && <CountdownRing seconds={votingTimer} total={30} />}
 
-            {human && human.status === 'alive' && phase !== 'role_reveal' && (
+            {human && human.status === 'alive' && (
               <button onClick={() => setShowRoleCard(true)}
                 className="text-[11px] font-sans font-bold border border-[#C9A84C]/40 text-[#C9A84C] px-3 py-1.5 rounded-full hover:bg-[#C9A84C]/10 transition-colors">
                 My Role
@@ -473,7 +515,7 @@ function GamePageInner() {
 
       <div className="max-w-4xl mx-auto px-4 pt-5 space-y-4 relative z-10">
 
-        {/* Night banner */}
+        {/* ── Night / Night-result banner ── */}
         {isNight && (
           <div className="rounded-2xl p-4 border border-[#C9A84C]/15" style={{ background: 'rgba(18,10,4,0.7)' }}>
             <p className="font-display italic text-[#C9A84C]/70 text-sm leading-relaxed" style={{ fontFamily: 'Fraunces, serif' }}>
@@ -482,30 +524,43 @@ function GamePageInner() {
           </div>
         )}
 
-        {/* Day banner */}
+        {/* ── Day morning report banner ── */}
         {phase === 'day' && dayBannerText && (
           <div className="rounded-2xl p-4 border border-[#C9A84C]/25" style={{ background: 'rgba(201,168,76,0.07)' }}>
             <p className="font-display italic text-[#C9A84C] text-sm leading-relaxed" style={{ fontFamily: 'Fraunces, serif' }}>📜 {dayBannerText}</p>
           </div>
         )}
 
-        {/* Vote result */}
+        {/* ── Vote result ── */}
         {phase === 'vote_result' && (
           <div className="rounded-2xl p-5 border text-center fade-in" style={{ background: 'rgba(139,26,26,0.12)', borderColor: 'rgba(200,90,42,0.25)' }}>
-            <p className="font-display font-black text-xl text-white" style={{ fontFamily: 'Fraunces, serif' }}>
-              {voteEliminated ? NARRATOR.voteResult(voteEliminated.displayName) : 'The vote was tied — no one goes to Kuje today.'}
-            </p>
+            {voteEliminated ? (
+              <>
+                <p className="font-display font-black text-xl text-white mb-1" style={{ fontFamily: 'Fraunces, serif' }}>
+                  {NARRATOR.voteResult(voteEliminated.displayName)}
+                </p>
+                <p className={`text-sm font-sans mt-1 ${ROLE_TEAMS[voteEliminated.role] === 'cabal' ? 'text-[#C85A2A]' : 'text-[#C9A84C]'}`}>
+                  {voteEliminated.displayName} was <span className="font-bold">{ROLE_LABELS[voteEliminated.role]}</span>
+                  {ROLE_TEAMS[voteEliminated.role] === 'cabal' ? ' — ⚖️ Justice served!' : ' — an innocent citizen.'}
+                </p>
+              </>
+            ) : (
+              <p className="font-display font-black text-xl text-white" style={{ fontFamily: 'Fraunces, serif' }}>
+                The vote was tied — no one goes to Kuje today.
+              </p>
+            )}
+            <p className="text-xs text-white/30 font-sans mt-3">Night falls again…</p>
           </div>
         )}
 
-        {/* Second vote banner */}
+        {/* ── Second vote banner ── */}
         {phase === 'second_voting' && (
           <div className="rounded-2xl p-3 border border-[#C9A84C]/25 text-center" style={{ background: 'rgba(201,168,76,0.06)' }}>
-            <p className="text-sm font-sans font-semibold text-[#C9A84C]">⚖️ Tie — Second vote between tied players only</p>
+            <p className="text-sm font-sans font-semibold text-[#C9A84C]">⚖️ Tie broken — Vote between tied suspects only</p>
           </div>
         )}
 
-        {/* Dibia result (private) */}
+        {/* ── Dibia investigation result (private) ── */}
         {dibiaResult && human?.role === 'dibia' && (isNight || phase === 'day') && (
           <div className="rounded-xl border border-[#C9A84C]/25 p-3 flex items-center gap-3" style={{ background: 'rgba(201,168,76,0.06)' }}>
             <span className="text-xl">🔮</span>
@@ -518,7 +573,7 @@ function GamePageInner() {
           </div>
         )}
 
-        {/* Human night action UI */}
+        {/* ── Human night action UI ── */}
         {phase === 'night' && human && human.status === 'alive' && nightNightAction && !humanNightActionDone && (
           <div className="rounded-2xl border border-[#C85A2A]/25 p-5 space-y-3" style={{ background: 'rgba(139,26,26,0.12)' }}>
             <p className="text-xs font-sans uppercase tracking-widest text-[#C85A2A] font-bold">
@@ -540,7 +595,7 @@ function GamePageInner() {
           <div className="rounded-2xl border border-white/8 p-6 text-center" style={{ background: 'rgba(255,255,255,0.03)' }}>
             <div className="text-4xl mb-3">😴</div>
             <p className="font-display italic text-[#C4B090]" style={{ fontFamily: 'Fraunces, serif' }}>Night has fallen. The village sleeps.</p>
-            <p className="text-xs text-[#C4B090]/40 font-sans mt-1.5">The Cabal is moving. Wait for morning.</p>
+            <p className="text-xs text-[#C4B090]/40 font-sans mt-1.5">The Cabal is moving in the shadows. Wait for morning.</p>
           </div>
         )}
 
@@ -550,7 +605,7 @@ function GamePageInner() {
           </div>
         )}
 
-        {/* Player grid */}
+        {/* ── Player grid ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {players.map(p => {
             const isHuman = p.id === human?.id
@@ -560,19 +615,24 @@ function GamePageInner() {
             const cardImg = revealAllRoles ? (CARD_IMAGES[p.role] ?? '/cards/Citizen.png') : isHuman ? (CARD_IMAGES[p.role] ?? '/cards/Citizen.png') : '/cards/Citizen.png'
             const inVotePool = phase !== 'second_voting' || tiedPlayers.some(t => t.id === p.id)
             const humanVoteNum = phase === 'second_voting' ? 2 : 1
-            const canVote = (phase === 'voting' || phase === 'second_voting') && !isHuman && !isElim && !humanHasVoted(humanVoteNum) && inVotePool
+            const canVote = (phase === 'voting' || phase === 'second_voting') && !isHuman && !isElim && !humanHasVoted(humanVoteNum) && inVotePool && human?.status === 'alive'
+            const alreadyVotedFor = humanHasVoted(humanVoteNum) && tally[p.id] > 0 && votes.find(v => v.voterId === human?.id && v.round === round && v.voteNumber === humanVoteNum)?.targetId === p.id
 
             return (
               <div key={p.id} className={`relative rounded-2xl overflow-hidden border transition-all flex flex-col min-h-[190px] ${
                 isElim ? 'opacity-35 border-white/8 grayscale' :
-                isLeading ? 'border-[#C85A2A]/60 shadow-lg shadow-[#C85A2A]/15' :
+                alreadyVotedFor ? 'border-[#C85A2A] shadow-lg shadow-[#C85A2A]/20' :
+                isLeading ? 'border-[#C85A2A]/60 shadow-[#C85A2A]/15 shadow-md' :
                 isHuman ? 'border-[#C9A84C]/45' : 'border-white/10'
               }`} style={{ background: isElim ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)' }}>
 
                 {isHuman && !isElim && (
                   <div className="absolute top-2 left-2 z-10 text-[9px] font-sans font-bold uppercase tracking-wider text-[#C9A84C] bg-[#C9A84C]/15 px-2 py-0.5 rounded-full">You</div>
                 )}
-                {isLeading && !isElim && (
+                {alreadyVotedFor && (
+                  <div className="absolute top-2 right-2 z-10 text-[9px] font-sans font-bold text-white bg-[#C85A2A] px-2 py-0.5 rounded-full">Your vote</div>
+                )}
+                {isLeading && !alreadyVotedFor && !isElim && (
                   <div className="absolute top-2 right-2 z-10 text-[9px] font-sans font-bold text-[#C85A2A]">🎯 {votesForPlayer}</div>
                 )}
 
@@ -602,22 +662,15 @@ function GamePageInner() {
           })}
         </div>
 
-        {/* Vote call */}
-        {(phase === 'voting' || phase === 'second_voting') && (
-          <p className="text-center font-display italic text-[#C9A84C]/60 text-sm" style={{ fontFamily: 'Fraunces, serif' }}>
-            &ldquo;{NARRATOR.voteCall}&rdquo;
-          </p>
-        )}
-
-        {/* Chat panel */}
-        {(phase === 'day' || phase === 'voting' || phase === 'second_voting') && (
+        {/* ── DAY DELIBERATION panel ── */}
+        {phase === 'day' && (
           <div className="rounded-2xl border border-white/10 overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)' }}>
             <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
               <span className="text-xs font-sans font-bold text-white/50 uppercase tracking-wider">🏛 Village Square</span>
-              {phase === 'day' && <span className="text-xs font-sans text-[#C9A84C] font-semibold">{dayTimer}s</span>}
-              {(phase === 'voting' || phase === 'second_voting') && (
-                <span className="text-xs font-sans text-white/30 italic">{NARRATOR.chatLocked}</span>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-sans text-[#C9A84C] font-semibold">{dayTimer}s</span>
+                <span className="text-[10px] text-white/30 font-sans">left to deliberate</span>
+              </div>
             </div>
 
             <div className="h-52 overflow-y-auto p-4 space-y-3">
@@ -625,7 +678,7 @@ function GamePageInner() {
                 const isMe = m.playerId === human?.id
                 return (
                   <div key={m.id} className={`flex gap-2 items-end ${isMe ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 ${isMe ? 'bg-[#C9A84C]/20' : 'bg-white/8'}`}
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0`}
                       style={{ background: isMe ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.08)' }}>
                       {isMe ? '👤' : '🤖'}
                     </div>
@@ -643,24 +696,93 @@ function GamePageInner() {
               <div ref={chatEndRef} />
             </div>
 
-            {phase === 'day' && (
-              <form onSubmit={handleHumanChat} className="border-t border-white/8 flex gap-2 p-3">
-                <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-                  placeholder="Speak your mind…"
-                  className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-[#C9A84C]/40 border border-white/10 transition-colors"
-                  style={{ background: 'rgba(255,255,255,0.05)' }} />
-                <button type="submit" disabled={!chatInput.trim()}
-                  className="bg-[#C9A84C] text-[#1C1710] font-sans font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-30 hover:bg-[#E8C46A] transition-colors">
-                  Send
-                </button>
-              </form>
+            <form onSubmit={handleHumanChat} className="border-t border-white/8 flex gap-2 p-3">
+              <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                placeholder="Speak your mind in the village square…"
+                className="flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/25 outline-none focus:border-[#C9A84C]/40 border border-white/10 transition-colors"
+                style={{ background: 'rgba(255,255,255,0.05)' }} />
+              <button type="submit" disabled={!chatInput.trim()}
+                className="bg-[#C9A84C]/20 border border-[#C9A84C]/30 text-[#C9A84C] font-sans font-bold px-4 py-2 rounded-xl text-sm disabled:opacity-30 hover:bg-[#C9A84C]/30 transition-colors">
+                Send
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* ── READY TO VOTE button (day phase) ── */}
+        {phase === 'day' && (
+          <div className="space-y-2">
+            <button onClick={startVoting}
+              className="w-full py-4 rounded-2xl font-sans font-bold text-base text-white transition-all hover:-translate-y-0.5 active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #C85A2A, #8B1A1A)', boxShadow: '0 4px 24px rgba(200,90,42,0.35)' }}>
+              ⚖️ Ready to Vote — Name the Agbero
+            </button>
+            <p className="text-center text-[10px] font-sans text-white/25">
+              All players vote simultaneously. Timer auto-starts voting in {dayTimer}s.
+            </p>
+          </div>
+        )}
+
+        {/* ── VOTING phase UI ── */}
+        {(phase === 'voting' || phase === 'second_voting') && (
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-[#C85A2A]/25 p-4 text-center" style={{ background: 'rgba(139,26,26,0.10)' }}>
+              <p className="font-display font-black text-lg text-white mb-1" style={{ fontFamily: 'Fraunces, serif' }}>
+                {NARRATOR.voteCall}
+              </p>
+              {human && human.status === 'alive' && !humanHasVoted(phase === 'second_voting' ? 2 : 1) && (
+                <p className="text-sm font-sans text-[#C85A2A] mt-2">
+                  👆 Tap <strong>Vote Out</strong> on the suspect above — {votingTimer}s remaining
+                </p>
+              )}
+              {human && human.status === 'alive' && humanHasVoted(phase === 'second_voting' ? 2 : 1) && (
+                <p className="text-sm font-sans text-[#C9A84C] mt-2">✓ Your vote is cast. Waiting for others…</p>
+              )}
+              {human?.status === 'eliminated' && (
+                <p className="text-sm font-sans text-white/40 mt-2 italic">You have been eliminated. Watch in silence.</p>
+              )}
+            </div>
+
+            {/* Live vote tally */}
+            <div className="rounded-xl border border-white/8 p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <p className="text-[10px] font-sans uppercase tracking-wider text-white/30 font-bold">Live Tally</p>
+              {players.filter(p => p.status === 'alive').map(p => {
+                const count = tally[p.id] ?? 0
+                const pct = aliveCount > 0 ? (count / aliveCount) * 100 : 0
+                return (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <span className="text-xs font-sans text-white/60 w-24 truncate">{p.displayName}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-white/8 overflow-hidden">
+                      <div className="h-full rounded-full bg-[#C85A2A] transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs font-sans font-bold text-white/50 w-4">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Chat replay (read-only during voting) */}
+            {messages.filter(m => m.phase === 'day').length > 0 && (
+              <div className="rounded-2xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <div className="px-4 py-2 border-b border-white/8 flex items-center gap-2">
+                  <span className="text-[10px] font-sans font-bold text-white/30 uppercase tracking-wider">🔇 Chat locked — deliberation over</span>
+                </div>
+                <div className="h-28 overflow-y-auto p-3 space-y-2">
+                  {messages.filter(m => m.phase === 'day').map(m => (
+                    <div key={m.id} className="flex gap-2">
+                      <span className="text-[10px] font-sans text-white/30 shrink-0">{m.playerName}:</span>
+                      <span className="text-[10px] font-sans text-white/50 leading-snug">{m.content}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}
 
         {/* Night silence */}
         {isNight && (
-          <p className="text-center text-xs font-sans italic text-white/15 py-2">{NARRATOR.chatLocked}</p>
+          <p className="text-center text-xs font-sans italic text-white/15 py-2">The village is silent. Things are happening in the dark.</p>
         )}
       </div>
     </div>
