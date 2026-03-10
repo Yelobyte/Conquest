@@ -56,6 +56,10 @@ export function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
+export function generateId(): string {
+  return Math.random().toString(36).substring(2, 10)
+}
+
 /**
  * Assigns roles to players. In test mode, Godfather is always a bot.
  * Returns players with roles assigned.
