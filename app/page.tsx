@@ -206,7 +206,7 @@ export default function HomePage() {
               <span className="font-display font-black text-xl text-ink tracking-tight" style={{ fontFamily: 'Fraunces, serif' }}>Conquest</span>
             </div>
             <div className="hidden md:flex items-center gap-1 bg-[#EDE0C4] rounded-full px-1 py-1">
-              {['Games', 'Friends', 'Leaderboard'].map((tab) => (
+              {['Games', 'Friends', 'Leaderboard', 'Vision'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {

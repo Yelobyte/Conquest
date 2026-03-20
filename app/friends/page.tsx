@@ -33,7 +33,7 @@ export default function FriendsPage() {
             <span className="font-display font-black text-xl text-[#1C1710]" style={{ fontFamily: 'Fraunces, serif' }}>Conquest</span>
           </button>
           <div className="flex items-center gap-1 bg-[#EDE0C4] rounded-full px-1 py-1">
-            {['Games', 'Friends', 'Leaderboard'].map(tab => (
+            {['Games', 'Friends', 'Leaderboard', 'Vision'].map(tab => (
               <button key={tab} onClick={() => { Sounds.click(); router.push(tab === 'Games' ? '/' : `/${tab.toLowerCase()}`) }}
                 className={`px-4 py-1.5 rounded-full text-sm font-sans font-medium transition-all ${tab === 'Friends' ? 'bg-[#FBF6EE] text-[#C85A2A] font-semibold shadow-sm' : 'text-[#6B5A42] hover:bg-[#FBF6EE]/60'}`}>
                 {tab}
